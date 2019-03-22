@@ -2,8 +2,6 @@
 names <- c("horario", "temp", "vento", "umid", "sensa")
 con <- url("https://ic.unicamp.br/~zanoni/cepagri/cepagri.csv")
 cepagri <- read.table(con, header = FALSE, sep = ";", fill = TRUE, col.names = names)
-#cepagri
-
 
 #Armazenando as linhas preenchidas com NA
 cepagriErro <- cepagri[is.na(cepagri[ , 5]), ]
@@ -48,15 +46,15 @@ consecutive <- function(vector, k = 1) {
   return(result)
 }
 
-#Por 24 horas
-cepagri <- cepagri[!consecutive(cepagri$temp, 144),]
+#Por 8h horas
+cepagri <- cepagri[!consecutive(cepagri$temp, 48),]
 
 #Gráficos
 library(ggplot2)
 
 #Temperatura média/ano
 
-#Media em 2015
+#Media da temperatura em 2015
 Temp2015 <- cepagri$temp[((cepagri$horario > "2014-12-31 23:59") == "TRUE")
                        & ((cepagri$horario < "2016-01-01 00:00") == "TRUE")]
 
@@ -96,7 +94,7 @@ Umid2015 <- cepagri$umid[((cepagri$horario > "2014-12-31 23:59") == "TRUE")
 Umid2015 <- round(mean(Umid2015), 2)
 Umid2015
 
-#Media em 2016
+#Umidade em 2016
 Umid2016 <- cepagri$umid[((cepagri$horario > "2015-12-31 23:59") == "TRUE")
                          & ((cepagri$horario < "2017-01-01 00:00") == "TRUE")]
 
@@ -104,14 +102,14 @@ Umid2016 <- round(mean(Umid2016), 2)
 Umid2016
 
 
-#Media em 2017
+#Umidade em 2017
 Umid2017 <- cepagri$umid[((cepagri$horario > "2016-12-31 23:59") == "TRUE")
                          & ((cepagri$horario < "2018-01-01 00:00") == "TRUE")]
 
 Umid2017 <- round(mean(Umid2017), 2)
 Umid2017
 
-#Media em 2018
+#Umidade em 2018
 Umid2018 <- cepagri$umid[((cepagri$horario > "2017-12-31 23:59") == "TRUE")
                          & ((cepagri$horario < "2019-01-01 00:00") == "TRUE")]
 
@@ -239,32 +237,37 @@ Verao2018 <- cepagri$temp[((cepagri$horario > "2017-12-31 23:59") == "TRUE")
                            & ((cepagri$horario < "2018-03-01 00:00") == "TRUE")]
 
 MaxVerao2018 <- max(Verao2018)
+MinVerao2018 <- min(Verao2018)
 
 Out2018 <- cepagri$temp[((cepagri$horario > "2018-02-28 23:59") == "TRUE")
                           & ((cepagri$horario < "2018-06-01 00:00") == "TRUE")]
 
 MaxOut2018 <- max(Out2018)
-MaxOut2018
+MinOut2018 <- min(Out2018)
 
 Inv2018 <- cepagri$temp[((cepagri$horario > "2018-05-31 23:59") == "TRUE")
                         & ((cepagri$horario < "2018-09-01 00:00") == "TRUE")]
 
 MaxInv2018 <- max(Inv2018)
-MaxInv2018
-min(Inv2018)
+MinInv2018 <- min(Inv2018)
 
 
 Prim2018 <- cepagri$temp[((cepagri$horario > "2018-08-31 23:59") == "TRUE")
                         & ((cepagri$horario < "2018-11-01 00:00") == "TRUE")]
 
 MaxPrim2018 <- max(Prim2018)
-MaxPrim2018
-
+MinPrim2018 <- min(Prim2018)
 
 vectorTempMax <- c(MaxVerao2018, MaxOut2018, MaxInv2018, MaxPrim2018)
+vectorTempMin <- c(MinVerao2018, MinOut2018, MinInv2018, MinPrim2018)
 vectorEstacoes <- c("Verao", "Outono", "Inverno", "Primavera")
 
-dfEstacoes = data.frame(Estacoes = vectorEstacoes, Temperatura = vectorTempMax) 
+dfEstacTemp2018 = data.frame(Estacoes = vectorEstacoes, Temp_Max = vectorTempMax, Temp_Min = vectorTempMin) 
+
+write.table(dfEstacTemp2018 , "EstacTempMaxMin.csv")
+
+
+#DataFrame com as temperaturas no verão
 dfVerao = data.frame(Temperatura = Verao2018)
 
 
@@ -281,20 +284,119 @@ ggsave("TempVerao.png", # units = "in"
 
 
 
-UmidJul2018 <- cepagri$umid[((cepagri$horario > "2017-12-31 23:59") == "TRUE")
+UmidJan2018 <- cepagri$umid[((cepagri$horario > "2017-12-31 23:59") == "TRUE")
                          & ((cepagri$horario < "2018-02-01 00:00") == "TRUE")]
 
-dfUmid2018 <- data.frame(Umidade = UmidJul2018)
-dfUmid2018$Condicao <- ifelse(dfUmid2018$Umidade > 70,
+dfUmidJan2018 <- data.frame(Umidade = UmidJan2018)
+dfUmidJan2018$Condicao <- ifelse(dfUmidJan2018$Umidade > 70,
                 "Ideal", "Não Ideal")
-dfUmid2018
+dfUmidJan2018
 
 
-ggplot(dfUmid2018, aes(x = Umidade,
+ggplot(dfUmidJan2018, aes(x = Umidade,
       colour = Condicao,
       fill = Condicao)) +
       geom_density(alpha = 0.25)
+ggsave("umidadeIdeal.png", width = 4, height = 4)
 
 
-ggsave("umidadeIdeal.png", # units = "in"
-       width = 4, height = 4)
+
+
+TempJan2018 <- cepagri$temp[((cepagri$horario > "2017-12-31 23:59") == "TRUE")
+                            & ((cepagri$horario < "2018-01-28 00:00") == "TRUE")]
+
+
+TempFev2018 <- cepagri$temp[((cepagri$horario > "2018-01-31 23:59") == "TRUE")
+                           & ((cepagri$horario < "2018-02-28 00:00") == "TRUE")]
+
+
+TempMarc2018 <- cepagri$temp[((cepagri$horario > "2018-02-28 23:59") == "TRUE")
+                            & ((cepagri$horario < "2018-03-28 00:00") == "TRUE")]
+
+TempAbril2018 <- cepagri$temp[((cepagri$horario > "2018-03-31 23:59") == "TRUE")
+                            & ((cepagri$horario < "2018-04-28 00:00") == "TRUE")]
+
+
+TempMaio2018 <- cepagri$temp[((cepagri$horario > "2018-04-30 23:59") == "TRUE")
+                              & ((cepagri$horario < "2018-05-28 00:00") == "TRUE")]
+
+TempJun2018 <- cepagri$temp[((cepagri$horario > "2018-05-31 23:59") == "TRUE")
+                            & ((cepagri$horario < "2018-06-28 00:00") == "TRUE")]
+
+
+TempJul2018 <- cepagri$temp[((cepagri$horario > "2018-06-30 23:59") == "TRUE")
+                            & ((cepagri$horario < "2018-07-28 00:00") == "TRUE")]
+
+
+TempAgost2018 <- cepagri$temp[((cepagri$horario > "2018-07-31 23:59") == "TRUE")
+                            & ((cepagri$horario < "2018-08-28 00:00") == "TRUE")]
+
+TempSet2018 <- cepagri$temp[((cepagri$horario > "2018-08-31 23:59") == "TRUE")
+                              & ((cepagri$horario < "2018-09-28 00:00") == "TRUE")]
+
+TempOut2018 <- cepagri$temp[((cepagri$horario > "2018-09-30 23:59") == "TRUE")
+                            & ((cepagri$horario < "2018-10-28 00:00") == "TRUE")]
+
+
+TempNov2018 <- cepagri$temp[((cepagri$horario > "2018-10-31 23:59") == "TRUE")
+                            & ((cepagri$horario < "2018-11-28 00:00") == "TRUE")]
+
+TempDez2018 <- cepagri$temp[((cepagri$horario > "2018-11-30 23:59") == "TRUE")
+                            & ((cepagri$horario < "2018-12-28 00:00") == "TRUE")]
+
+
+
+vectorTemp2018 <- c(TempJan2018[1:3500], TempFev2018[1:3500],
+                TempMarc2018[1:3500], TempAbril2018[1:3500],
+                TempMaio2018[1:3500], TempJun2018[1:3500],
+                TempJul2018[1:3500], TempAgost2018[1:3500],
+                TempSet2018[1:3500], TempOut2018[1:3500],
+                TempNov2018[1:3500], TempDez2018[1:3500])
+
+dtTemp2018 <- NULL
+dtTemp2018 <- data.frame(Temperatura = vectorTemp2018, Meses = 1)
+vectorTemp2018
+
+dtTemp2018[1:3500, 2] <- 1
+dtTemp2018[3501:7000, 2] <- 2
+dtTemp2018[7001:10500, 2] <- 3
+dtTemp2018[10501:14000, 2] <- 4
+dtTemp2018[14001:17500, 2] <- 5
+dtTemp2018[17501:21000, 2] <- 6
+dtTemp2018[21001:24500, 2] <- 7
+dtTemp2018[24501:28000, 2] <- 8
+dtTemp2018[28001:31500, 2] <- 9
+dtTemp2018[31501:35000, 2] <- 10
+dtTemp2018[35001:38500, ] <- 11
+dtTemp2018[38501:42000, 2] <- 12
+
+dtTemp2018$Meses <- factor(month.abb[dtTemp2018$Meses],
+                   levels = month.abb,
+                   ordered = TRUE)
+
+
+ggplot(dtTemp2018, aes(x = Meses,
+               y = Temperatura,
+               group = Meses,
+               fill = Meses)) + 
+               geom_boxplot()
+
+ggsave("Temp2018.png", width = 4, height = 4)
+
+MeanTemp2018 <- aggregate(dtTemp2018$Temperatura,
+          list(dtTemp2018$Meses), mean)
+
+MeanTemp2018 <- MeanTemp2018[1:6, ]
+colnames(MeanTemp2018) <- c("Meses", "Temperaturas")
+
+write.table(MeanTemp2018 , "MediaAno2018.csv")
+
+
+
+ggplot(dtTemp2018, aes(x = Temperatura,
+                        y = Meses)) +
+  geom_point(aes(colour = Temperatura),
+                 alpha = 0.5) +
+  scale_color_continuous(low = "yellow",
+                             high = "red")
+ggsave("Temp2018Vermelho.png", width = 4, height = 4)
