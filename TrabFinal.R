@@ -3,28 +3,25 @@ names <- c("horario", "temp", "vento", "umid", "sensa")
 con <- url("https://ic.unicamp.br/~zanoni/cepagri/cepagri.csv")
 cepagri <- read.table(con, header = FALSE, sep = ";", fill = TRUE, col.names = names)
 
-#Armazenando as linhas preenchidas com NA
-cepagriErro <- cepagri[is.na(cepagri[ , 5]), ]
-nrow(cepagriErro)
-
-#Eliminando as linha consideradas com erro do dataset inicial
-cepagri <- cepagri[!is.na(cepagri[ , 5]), ]
-
 #Por conta das linhas com erro, as duas primeiras colunas estão como factor, portanto
 #iremos convertê-las
 cepagri[ ,1] <- as.POSIXct(as.character(cepagri[,1]),
                            format = '%d/%m/%Y-%H:%M')
 
-cepagri[ , 2] <- as.character(cepagri[ , 2])
-cepagri[ , 2] <- as.numeric(cepagri[ , 2])
 
 class(cepagri[ ,1])
 class(cepagri[ ,2])
 
 #Filtrando considerando apenas o período solicitado no trabalho
 cepagri <- cepagri[cepagri[ , 1] > "2014-12-31 23:59" & 
-                 cepagri[ , 1] < "2019-01-01 00:00" , ]
+                     cepagri[ , 1] < "2019-01-01 00:00" , ]
 
+#Eliminando as linha consideradas com erro do dataset inicial
+cepagri <- cepagri[!is.na(cepagri[ , 5]), ]
+
+#Após retirnarmos os NA, convertemos a coluna 2 para numérico
+cepagri[ , 2] <- as.character(cepagri[ , 2])
+cepagri[ , 2] <- as.numeric(cepagri[ , 2])
 
 
 #Execucanto o comando Summary, percebemos que existem temperaturas  iguais a 
@@ -46,13 +43,14 @@ consecutive <- function(vector, k = 1) {
   return(result)
 }
 
-#Por 8h horas
+#Por estratégia, temperaturas constantes por 8 horas serão eliminadas
 cepagri <- cepagri[!consecutive(cepagri$temp, 48),]
 
 #Gráficos
 library(ggplot2)
 
-#Temperatura média/ano
+
+#Cálculo da Temperatura média/ano
 
 #Media da temperatura em 2015
 Temp2015 <- cepagri$temp[((cepagri$horario > "2014-12-31 23:59") == "TRUE")
@@ -83,9 +81,7 @@ Temp2018 <- cepagri$temp[((cepagri$horario > "2017-12-31 23:59") == "TRUE")
 Temp2018 <- round(mean(Temp2018), 2)
 Temp2018
 
-
-
-#Umidade média/ano
+#Cálculo da Umidade média/ano
 
 #umidade em 2015
 Umid2015 <- cepagri$umid[((cepagri$horario > "2014-12-31 23:59") == "TRUE")
@@ -201,7 +197,8 @@ p <- p + labs(title = "Média da Temperatura por Ano"); p
 p <- p + theme(plot.title =
                element_text(hjust = 0.5)); p
 
-ggsave("mediaTempAno.png", # units = "in"
+#Salvando o gráfico
+ggsave("mediaTempAno.png",
          width = 4, height = 6)
 
 #Gráfico de vento x temperatura por ano
@@ -224,10 +221,12 @@ p <- p + theme(legend.background =
 p <- p + theme(legend.position = "bottom"); p
 p <- p + theme(legend.position =
                c(0.85, 0.3)); p
+
+#Salvando o gráfico
 ggsave("mediaTempVentoAno.png", # units = "in"
        width = 4, height = 4)
 
-#Tabela
+#Salvando a Tabela de médias
 write.table(dfMean , "MediaPorAno.csv")
 
 
@@ -251,7 +250,6 @@ Inv2018 <- cepagri$temp[((cepagri$horario > "2018-05-31 23:59") == "TRUE")
 MaxInv2018 <- max(Inv2018)
 MinInv2018 <- min(Inv2018)
 
-
 Prim2018 <- cepagri$temp[((cepagri$horario > "2018-08-31 23:59") == "TRUE")
                         & ((cepagri$horario < "2018-11-01 00:00") == "TRUE")]
 
@@ -264,13 +262,13 @@ vectorEstacoes <- c("Verao", "Outono", "Inverno", "Primavera")
 
 dfEstacTemp2018 = data.frame(Estacoes = vectorEstacoes, Temp_Max = vectorTempMax, Temp_Min = vectorTempMin) 
 
+#Salvando tabela com temperaturas máximas/mínimas de cada estação do ano
 write.table(dfEstacTemp2018 , "EstacTempMaxMin.csv")
-
 
 #DataFrame com as temperaturas no verão
 dfVerao = data.frame(Temperatura = Verao2018)
 
-
+#Variação da temperatura no verão
 ggplot(dfVerao, aes(x = Temperatura)) +
 geom_histogram(aes(y = ..density..),
                binwidth = 5,
@@ -281,71 +279,70 @@ geom_histogram(aes(y = ..density..),
 ggsave("TempVerao.png", # units = "in"
        width = 4, height = 4)
 
-
-
-
+#Gerando a umidade de Jan/2018
 UmidJan2018 <- cepagri$umid[((cepagri$horario > "2017-12-31 23:59") == "TRUE")
                          & ((cepagri$horario < "2018-02-01 00:00") == "TRUE")]
 
 dfUmidJan2018 <- data.frame(Umidade = UmidJan2018)
+
+#Considerando que a umidade menor que 70, não seria ideal
 dfUmidJan2018$Condicao <- ifelse(dfUmidJan2018$Umidade > 70,
                 "Ideal", "Não Ideal")
 dfUmidJan2018
 
-
+#Gerando o gráfico
 ggplot(dfUmidJan2018, aes(x = Umidade,
       colour = Condicao,
       fill = Condicao)) +
       geom_density(alpha = 0.25)
+
+#Salvando o gráfico
 ggsave("umidadeIdeal.png", width = 4, height = 4)
 
-
-
-
+#Gerando a temperatura em Jan/2018
 TempJan2018 <- cepagri$temp[((cepagri$horario > "2017-12-31 23:59") == "TRUE")
                             & ((cepagri$horario < "2018-01-28 00:00") == "TRUE")]
 
-
+#Fev/2018
 TempFev2018 <- cepagri$temp[((cepagri$horario > "2018-01-31 23:59") == "TRUE")
                            & ((cepagri$horario < "2018-02-28 00:00") == "TRUE")]
 
-
+#Marc/2018
 TempMarc2018 <- cepagri$temp[((cepagri$horario > "2018-02-28 23:59") == "TRUE")
                             & ((cepagri$horario < "2018-03-28 00:00") == "TRUE")]
-
+#Abril/2018
 TempAbril2018 <- cepagri$temp[((cepagri$horario > "2018-03-31 23:59") == "TRUE")
                             & ((cepagri$horario < "2018-04-28 00:00") == "TRUE")]
 
-
+#MAio/2018
 TempMaio2018 <- cepagri$temp[((cepagri$horario > "2018-04-30 23:59") == "TRUE")
                               & ((cepagri$horario < "2018-05-28 00:00") == "TRUE")]
-
+#Jun/2018
 TempJun2018 <- cepagri$temp[((cepagri$horario > "2018-05-31 23:59") == "TRUE")
                             & ((cepagri$horario < "2018-06-28 00:00") == "TRUE")]
 
-
+#Jul/2018
 TempJul2018 <- cepagri$temp[((cepagri$horario > "2018-06-30 23:59") == "TRUE")
                             & ((cepagri$horario < "2018-07-28 00:00") == "TRUE")]
 
-
+#Agosto/2018
 TempAgost2018 <- cepagri$temp[((cepagri$horario > "2018-07-31 23:59") == "TRUE")
                             & ((cepagri$horario < "2018-08-28 00:00") == "TRUE")]
-
+#Setembro/2018
 TempSet2018 <- cepagri$temp[((cepagri$horario > "2018-08-31 23:59") == "TRUE")
                               & ((cepagri$horario < "2018-09-28 00:00") == "TRUE")]
-
+#Outubro/2018
 TempOut2018 <- cepagri$temp[((cepagri$horario > "2018-09-30 23:59") == "TRUE")
                             & ((cepagri$horario < "2018-10-28 00:00") == "TRUE")]
 
-
+#Novembro/2018
 TempNov2018 <- cepagri$temp[((cepagri$horario > "2018-10-31 23:59") == "TRUE")
                             & ((cepagri$horario < "2018-11-28 00:00") == "TRUE")]
-
+#Dezembro/2018
 TempDez2018 <- cepagri$temp[((cepagri$horario > "2018-11-30 23:59") == "TRUE")
                             & ((cepagri$horario < "2018-12-28 00:00") == "TRUE")]
 
-
-
+#Gerando vetor por mês de 2018, padronizando 3500 medida cada mês
 vectorTemp2018 <- c(TempJan2018[1:3500], TempFev2018[1:3500],
                 TempMarc2018[1:3500], TempAbril2018[1:3500],
                 TempMaio2018[1:3500], TempJun2018[1:3500],
@@ -353,11 +350,14 @@ vectorTemp2018 <- c(TempJan2018[1:3500], TempFev2018[1:3500],
                 TempSet2018[1:3500], TempOut2018[1:3500],
                 TempNov2018[1:3500], TempDez2018[1:3500])
 
+#Gerando dataframe com as temperaturas de todos os meses, a princípio, todos 
+#com mes igual a 1
 dtTemp2018 <- NULL
 dtTemp2018 <- data.frame(Temperatura = vectorTemp2018, Meses = 1)
 vectorTemp2018
 
-dtTemp2018[1:3500, 2] <- 1
+#Atribuindo o mês de fato a cada 3500 registros, conforme padrozinado acima.
+#dtTemp2018[1:3500, 2] <- 1
 dtTemp2018[3501:7000, 2] <- 2
 dtTemp2018[7001:10500, 2] <- 3
 dtTemp2018[10501:14000, 2] <- 4
@@ -367,21 +367,27 @@ dtTemp2018[21001:24500, 2] <- 7
 dtTemp2018[24501:28000, 2] <- 8
 dtTemp2018[28001:31500, 2] <- 9
 dtTemp2018[31501:35000, 2] <- 10
-dtTemp2018[35001:38500, ] <- 11
+dtTemp2018[35001:38500, 2] <- 11
 dtTemp2018[38501:42000, 2] <- 12
 
+
+dtTemp2018 <- dtTemp2018[!is.na(dtTemp2018[ , 1]), ]
+
+#Definindo Meses como factor e atribuindo o nome de cada mês
 dtTemp2018$Meses <- factor(month.abb[dtTemp2018$Meses],
                    levels = month.abb,
                    ordered = TRUE)
 
-
+#Gerando o gráfico de temperaturas/mês em 2018
 ggplot(dtTemp2018, aes(x = Meses,
                y = Temperatura,
                group = Meses,
                fill = Meses)) + 
                geom_boxplot()
 
+#Salvando a temperatura em 2018
 ggsave("Temp2018.png", width = 4, height = 4)
+
 
 MeanTemp2018 <- aggregate(dtTemp2018$Temperatura,
           list(dtTemp2018$Meses), mean)
@@ -389,14 +395,16 @@ MeanTemp2018 <- aggregate(dtTemp2018$Temperatura,
 MeanTemp2018 <- MeanTemp2018[1:6, ]
 colnames(MeanTemp2018) <- c("Meses", "Temperaturas")
 
+#Salvando a media de temperatura dos meses de 2018
 write.table(MeanTemp2018 , "MediaAno2018.csv")
 
 
-
+#Gerando gráfico
 ggplot(dtTemp2018, aes(x = Temperatura,
                         y = Meses)) +
   geom_point(aes(colour = Temperatura),
                  alpha = 0.5) +
   scale_color_continuous(low = "yellow",
                              high = "red")
+#Salvando
 ggsave("Temp2018Vermelho.png", width = 4, height = 4)
